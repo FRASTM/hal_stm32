@@ -605,6 +605,18 @@ void HAL_OSPI_IRQHandler(OSPI_HandleTypeDef *hospi)
       }
       else if (hospi->XferCount == 0U)
       {
+        /*
+         * It might happen that fifo is not empty when count is reached.
+         * This is the case when reading 3 bytes with  octal_READ DTRD (0xEE11) instruction.
+         * a 4th interrupt comes with hospi->XferCount = 0 and OCTOSPI_SR_FLEVEL = 1
+         * In that case the Busy flag remains set until the OCTOSPI_SR_FLEVEL = 0
+         * Be sure to empty the fifo and BUSY flag becomes, else timeout occurs
+        */
+        uint8_t dummy_read = 0;
+        while ((hospi->Instance->SR & OCTOSPI_SR_FLEVEL) != 0U) {
+          dummy_read = *((__IO uint8_t *)data_reg);
+        }
+
         /* Clear flag */
         hospi->Instance->FCR = HAL_OSPI_FLAG_TC;
 
